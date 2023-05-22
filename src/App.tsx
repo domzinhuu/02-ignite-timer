@@ -6,14 +6,12 @@ import { BrowserRouter } from 'react-router-dom'
 
 export function App() {
   return (
-    <div style={{ display: 'flex', gap: '1rem', flexDirection: 'column' }}>
-      <ThemeProvider theme={defaultTheme}>
-        <BrowserRouter>
-          <Router />
-        </BrowserRouter>
+    <ThemeProvider theme={defaultTheme}>
+      <BrowserRouter>
+        <Router />
+      </BrowserRouter>
 
-        <GlobalStyle />
-      </ThemeProvider>
-    </div>
+      <GlobalStyle />
+    </ThemeProvider>
   )
 }
