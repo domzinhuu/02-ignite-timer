@@ -1,59 +1,114 @@
-import { Play } from 'phosphor-react'
+import { HandPalm, Play } from 'phosphor-react'
+import { FormProvider, useForm } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
+import * as zod from 'zod'
 import {
-  CountDownContainer,
-  FormContainer,
   HomeContainer,
-  MinutesAmountInput,
-  Separator,
   StartCoutdownButton,
-  TaskInput,
+  StopCoutdownButton,
 } from './styles'
+import { useState } from 'react'
+import { NewCycleForm } from './components/NewCycleForm'
+import { CountyDown } from './components/Countdown'
+import { Cycle, CycleContext } from '../../contexts/CycleContext'
+
+const newCicleFormValidationSchema = zod.object({
+  task: zod.string().min(1, 'Informe a tarefa'),
+  minutesAmount: zod.number().min(5).max(60),
+})
+
+type NewCicleFormData = zod.infer<typeof newCicleFormValidationSchema>
 
 export function Home() {
+  const [cycles, setCycles] = useState<Cycle[]>([])
+  const [activeCycleId, setActiveCycleId] = useState<string | null>(null)
+
+  const activeCycle = cycles.find((cycle) => cycle.id === activeCycleId)
+
+  const newCycleForm = useForm<NewCicleFormData>({
+    resolver: zodResolver(newCicleFormValidationSchema),
+    defaultValues: {
+      task: '',
+      minutesAmount: 5,
+    },
+  })
+
+  function handleCreateNewCicle(data: NewCicleFormData) {
+    const newCycle: Cycle = {
+      id: String(Date.now()),
+      task: data.task,
+      minutesAmount: data.minutesAmount,
+      startDate: new Date(),
+    }
+
+    setActiveCycleId(newCycle.id)
+    setCycles((prevState) => [...prevState, newCycle])
+    reset()
+  }
+
+  function handleInterruptCycle() {
+    setCycles((prevState) => {
+      const newCycles = prevState.map((cycle) => {
+        if (cycle.id === activeCycleId) {
+          cycle.interruptDate = new Date()
+        }
+
+        return cycle
+      })
+      return newCycles
+    })
+
+    setActiveCycleId(null)
+  }
+
+  function markCurrentCycleAsFinished(): void {
+    setCycles((prevState: Cycle[]) => {
+      const newCycles = prevState.map((cycle) => {
+        if (cycle.id === activeCycleId) {
+          cycle.finishedDate = new Date()
+        }
+
+        return cycle
+      })
+      return newCycles
+    })
+    setActiveCycleId(null)
+  }
+
+  const { handleSubmit, watch, reset } = newCycleForm
+  const task = watch('task')
+  const isSubmitDisabled = !task
+
   return (
-    <HomeContainer>
-      <form>
-        <FormContainer>
-          <label htmlFor="task">Vou trabalhar em</label>
-          <TaskInput
-            type="text"
-            id="task"
-            placeholder="Dê um nome para o seu projeto"
-            list="task-suggestions"
-          />
-          <datalist id="task-suggestions">
-            <option value="Projeto 1" />
-            <option value="Projeto 2" />
-            <option value="Projeto 3" />
-            <option value="Banana" />
-          </datalist>
+    <CycleContext.Provider
+      value={{
+        activeCycle,
+        cycles,
+        markCurrentCycleAsFinished,
+        activeCycleId,
+      }}
+    >
+      <HomeContainer>
+        <form onSubmit={handleSubmit(handleCreateNewCicle)}>
+          <FormProvider {...newCycleForm}>
+            <NewCycleForm />
+          </FormProvider>
 
-          <label htmlFor="minutesAmount">durante</label>
-          <MinutesAmountInput
-            type="number"
-            step={5}
-            min={5}
-            max={60}
-            id="minutesAmount"
-            placeholder="00"
-          />
+          <CountyDown />
 
-          <span>minutos.</span>
-        </FormContainer>
-
-        <CountDownContainer>
-          <span>0</span>
-          <span>0</span>
-          <Separator>:</Separator>
-          <span>0</span>
-          <span>0</span>
-        </CountDownContainer>
-
-        <StartCoutdownButton type="submit">
-          <Play size={24} />
-          Começar
-        </StartCoutdownButton>
-      </form>
-    </HomeContainer>
+          {activeCycle ? (
+            <StopCoutdownButton type="button" onClick={handleInterruptCycle}>
+              <HandPalm size={24} />
+              Interromper
+            </StopCoutdownButton>
+          ) : (
+            <StartCoutdownButton disabled={isSubmitDisabled} type="submit">
+              <Play size={24} />
+              Começar
+            </StartCoutdownButton>
+          )}
+        </form>
+      </HomeContainer>
+    </CycleContext.Provider>
   )
 }
