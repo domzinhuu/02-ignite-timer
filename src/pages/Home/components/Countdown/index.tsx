@@ -1,15 +1,49 @@
-import { useContext, useEffect, useState } from 'react'
+import { useContext, useEffect } from 'react'
 import { CountDownContainer, Separator } from './styles'
 import { differenceInSeconds } from 'date-fns'
-import { CycleContext } from '../../../../contexts/CycleContext'
+import { CycleContext } from '../../../../contexts/CycleContext.tsx'
 
 export function CountyDown() {
-  const [amountSecondsPassed, setAmountSecondsPassed] = useState<number>(0)
-
-  const { activeCycleId, activeCycle, markCurrentCycleAsFinished } =
-    useContext(CycleContext)
+  const {
+    activeCycleId,
+    activeCycle,
+    amountSecondsPassed,
+    updateSecondsPassed,
+    markCurrentCycleAsFinished,
+  } = useContext(CycleContext)
 
   const totalSeconds = activeCycle ? activeCycle.minutesAmount * 60 : 0
+
+  useEffect(() => {
+    let interval: number
+    if (activeCycle) {
+      interval = setInterval(() => {
+        const diffInSeconds = differenceInSeconds(
+          new Date(),
+          new Date(activeCycle.startDate),
+        )
+
+        if (diffInSeconds >= totalSeconds) {
+          markCurrentCycleAsFinished()
+          updateSecondsPassed(0)
+          clearInterval(interval)
+        } else {
+          updateSecondsPassed(diffInSeconds)
+        }
+      }, 1000)
+    }
+
+    return () => {
+      clearInterval(interval)
+    }
+  }, [
+    activeCycle,
+    activeCycleId,
+    totalSeconds,
+    updateSecondsPassed,
+    markCurrentCycleAsFinished,
+  ])
+
   const currentSeconds = activeCycle ? totalSeconds - amountSecondsPassed : 0
   const minutesAmount = Math.floor(currentSeconds / 60)
   const secondsAmount = currentSeconds % 60
@@ -25,36 +59,6 @@ export function CountyDown() {
     }
   }, [minutes, seconds, activeCycle])
 
-  useEffect(() => {
-    let interval: number
-    if (activeCycle) {
-      interval = setInterval(() => {
-        const diffInSeconds = differenceInSeconds(
-          new Date(),
-          activeCycle.startDate,
-        )
-
-        if (diffInSeconds >= totalSeconds) {
-          markCurrentCycleAsFinished()
-          clearInterval(interval)
-          setAmountSecondsPassed(0)
-        } else {
-          setAmountSecondsPassed(diffInSeconds)
-        }
-      }, 1000)
-    }
-
-    return () => {
-      setAmountSecondsPassed(0)
-      clearInterval(interval)
-    }
-  }, [
-    activeCycle,
-    activeCycleId,
-    totalSeconds,
-    setAmountSecondsPassed,
-    markCurrentCycleAsFinished,
-  ])
   return (
     <CountDownContainer>
       <span>{minutes[0]}</span>

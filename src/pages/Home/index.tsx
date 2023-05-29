@@ -7,10 +7,10 @@ import {
   StartCoutdownButton,
   StopCoutdownButton,
 } from './styles'
-import { useState } from 'react'
 import { NewCycleForm } from './components/NewCycleForm'
 import { CountyDown } from './components/Countdown'
-import { Cycle, CycleContext } from '../../contexts/CycleContext'
+import { CycleContext } from '../../contexts/CycleContext.tsx'
+import { useContext } from 'react'
 
 const newCicleFormValidationSchema = zod.object({
   task: zod.string().min(1, 'Informe a tarefa'),
@@ -20,11 +20,8 @@ const newCicleFormValidationSchema = zod.object({
 type NewCicleFormData = zod.infer<typeof newCicleFormValidationSchema>
 
 export function Home() {
-  const [cycles, setCycles] = useState<Cycle[]>([])
-  const [activeCycleId, setActiveCycleId] = useState<string | null>(null)
-
-  const activeCycle = cycles.find((cycle) => cycle.id === activeCycleId)
-
+  const { activeCycle, createNewCycle, interruptCycle } =
+    useContext(CycleContext)
   const newCycleForm = useForm<NewCicleFormData>({
     resolver: zodResolver(newCicleFormValidationSchema),
     defaultValues: {
@@ -34,45 +31,12 @@ export function Home() {
   })
 
   function handleCreateNewCicle(data: NewCicleFormData) {
-    const newCycle: Cycle = {
-      id: String(Date.now()),
-      task: data.task,
-      minutesAmount: data.minutesAmount,
-      startDate: new Date(),
-    }
-
-    setActiveCycleId(newCycle.id)
-    setCycles((prevState) => [...prevState, newCycle])
+    createNewCycle(data)
     reset()
   }
 
   function handleInterruptCycle() {
-    setCycles((prevState) => {
-      const newCycles = prevState.map((cycle) => {
-        if (cycle.id === activeCycleId) {
-          cycle.interruptDate = new Date()
-        }
-
-        return cycle
-      })
-      return newCycles
-    })
-
-    setActiveCycleId(null)
-  }
-
-  function markCurrentCycleAsFinished(): void {
-    setCycles((prevState: Cycle[]) => {
-      const newCycles = prevState.map((cycle) => {
-        if (cycle.id === activeCycleId) {
-          cycle.finishedDate = new Date()
-        }
-
-        return cycle
-      })
-      return newCycles
-    })
-    setActiveCycleId(null)
+    interruptCycle()
   }
 
   const { handleSubmit, watch, reset } = newCycleForm
@@ -80,35 +44,26 @@ export function Home() {
   const isSubmitDisabled = !task
 
   return (
-    <CycleContext.Provider
-      value={{
-        activeCycle,
-        cycles,
-        markCurrentCycleAsFinished,
-        activeCycleId,
-      }}
-    >
-      <HomeContainer>
-        <form onSubmit={handleSubmit(handleCreateNewCicle)}>
-          <FormProvider {...newCycleForm}>
-            <NewCycleForm />
-          </FormProvider>
+    <HomeContainer>
+      <form onSubmit={handleSubmit(handleCreateNewCicle)}>
+        <FormProvider {...newCycleForm}>
+          <NewCycleForm />
+        </FormProvider>
 
-          <CountyDown />
+        <CountyDown />
 
-          {activeCycle ? (
-            <StopCoutdownButton type="button" onClick={handleInterruptCycle}>
-              <HandPalm size={24} />
-              Interromper
-            </StopCoutdownButton>
-          ) : (
-            <StartCoutdownButton disabled={isSubmitDisabled} type="submit">
-              <Play size={24} />
-              Começar
-            </StartCoutdownButton>
-          )}
-        </form>
-      </HomeContainer>
-    </CycleContext.Provider>
+        {activeCycle ? (
+          <StopCoutdownButton type="button" onClick={handleInterruptCycle}>
+            <HandPalm size={24} />
+            Interromper
+          </StopCoutdownButton>
+        ) : (
+          <StartCoutdownButton disabled={isSubmitDisabled} type="submit">
+            <Play size={24} />
+            Começar
+          </StartCoutdownButton>
+        )}
+      </form>
+    </HomeContainer>
   )
 }
